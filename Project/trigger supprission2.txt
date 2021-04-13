@@ -1,0 +1,37 @@
+create or replace trigger supression_centre 
+before delete on comptes for each row
+begin
+  declare
+  V clients.villeclient%type;
+  S comptes.solde%type:=:OLD.solde;
+  C number;
+  A number;
+  begin
+  select villeclient into V from clients where nclient=:OLD.nclient;
+  
+  if (V='Rabat' and S>=0) then
+    select count(idcompte) into C from comptes2 where comptes2.nclient=:OLD.nclient;        
+    select count(idcompte) into A from comptes2 where comptes2.codeagence=:OLD.codeagence;  
+    delete from comptes2 where idcompte=:OLD.idcompte;                                     
+    if (C=1) then                                                                           
+        delete from clients2 where clients2.nclient=:OLD.nclient; 
+    end if;
+    if (A=1)then                                                                           
+         delete from agences2 where agences2.codeagence=:OLD.codeagence; 
+    end if;
+      
+  elsif (V='Casablanca' and S<0) then
+    select count(idcompte) into C from comptes1 where comptes1.nclient=:OLD.nclient;       
+    select count(idcompte) into A from comptes1 where comptes1.codeagence=:OLD.codeagence;  
+    delete from comptes1 where idcompte=:OLD.idcompte;                                      
+    if (C=1) then                                                                          
+        delete from clients1 where clients1.nclient=:OLD.nclient;
+    end if;
+    if (A=1)then                                                                          
+        delete from agences1 where agences1.codeagence=:OLD.codeagence;
+    end if;
+      
+  end if;
+  commit;
+  end;
+end;

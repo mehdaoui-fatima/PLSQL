@@ -1,0 +1,61 @@
+create or replace TRIGGER "UPDATE_CENTRE" before update on comptes for each row
+begin
+    declare 
+    S comptes.solde%type:=:NEW.solde;
+    V clients.villeclient%type;
+    p number;
+    A number;
+    C number;
+    type str is record (l clients%rowtype);
+    E str;
+    type strag is record (lag agences%rowtype);
+    Eag strag;
+    begin
+    select VILLECLIENT into V from CLIENTS
+    where CLIENTS.NCLIENT=:new.NCLIENT ;
+    if (V='Rabat' and :NEW.solde>=0 and:OLD.solde<0) then 
+    select count(idcompte) into A from comptes2 where comptes2.codeagence=:NEW.codeagence;
+    insert into comptes2 values (:NEW.IDCOMPTE,:NEW.ncompte,:NEW.solde,:NEW.nclient,:NEW.CODEAGENCE);
+    if (A=0) then select * into Eag.lag from agences where codeagence=:NEW.codeagence;
+    insert into agences2 values Eag.lag;end if;
+    select nclient into p from clients2 where nclient=:NEW.nclient;    
+    
+    elsif(V='Casablanca' and :NEW.solde<0 and:OLD.solde>=0) then   
+    select count(idcompte) into A from comptes1 where comptes1.codeagence=:NEW.codeagence;
+    insert into comptes1 values (:NEW.IDCOMPTE,:NEW.ncompte,:NEW.solde,:NEW.nclient,:NEW.CODEAGENCE);
+    if (A=0)  then select * into Eag.lag from agences where codeagence=:NEW.codeagence;
+      insert into agences1 values Eag.lag;end if;
+    select nclient into p from clients1 where nclient=:NEW.nclient;      
+    elsif(V='Rabat' and :NEW.solde>=0 and:OLD.solde>=0) then 
+    update comptes2 set comptes2.solde=:NEW.solde where nclient=:NEW.nclient;
+  
+    elsif(V='Casablanca' and :NEW.solde<0 and:OLD.solde<0) then 
+    update comptes1 set comptes1.solde=:NEW.solde where nclient=:NEW.nclient;
+
+
+    elsif (V='Rabat' and :NEW.solde<0 and:OLD.solde>=0) then
+    select count(idcompte) into C from comptes2 where comptes2.nclient=:NEW.nclient;
+    select count(idcompte) into A from comptes2 where comptes2.codeagence=:NEW.codeagence;
+    delete from comptes2 where comptes2.idcompte=:NEW.idcompte;
+    if C=1 then delete from clients2 where clients2.nclient=:NEW.nclient;end if; 
+    if (A=1)then delete from agences2 where agences2.codeagence=:NEW.codeagence;end if;
+ 
+    elsif (V='Casablanca' and :NEW.solde>=0 and:OLD.solde<0) then
+    select count(idcompte) into C from comptes1 where comptes1.nclient=:NEW.nclient;
+     select count(idcompte) into A from comptes1 where comptes1.codeagence=:NEW.codeagence;
+    delete from comptes1 where comptes1.idcompte=:NEW.idcompte;
+      if c=1 then delete from clients1 where clients1.nclient=:NEW.nclient;end if; 
+      if (A=1)then delete from agences1 where agences1.codeagence=:NEW.codeagence;end if; 
+    end if;
+     commit;
+    exception
+    when no_data_found then  
+    select * into E.l from clients where nclient=:NEW.nclient;
+    if (V='Rabat' and :NEW.solde>=0 and:OLD.solde<0) then 
+      insert into clients2 values E.l;
+    
+    elsif(V='Casablanca' and :NEW.solde<0 and :OLD.solde>=0) then 
+      insert into clients1 values E.l;
+    end if;
+    end;
+end;

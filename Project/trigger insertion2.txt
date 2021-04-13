@@ -1,0 +1,41 @@
+create or replace trigger insertion_centre 
+before insert on comptes for each row
+begin 
+    declare 
+    S comptes.solde%type:=:NEW.solde;
+    V clients.villeclient%type;
+    p number ;
+    A number;
+    type strag is record(Lag agences%rowtype);
+    type str is record (L clients%rowtype);
+    E str;
+    Eag strag;
+    begin
+    select villeclient into V from clients where nclient=:NEW.nclient;
+
+    if (V='Rabat' and S>=0) then
+      select count(idcompte) into A from comptes2 where comptes2.codeagence=:NEW.codeagence;
+      insert into comptes2 values (:NEW.IDCOMPTE,:NEW.ncompte,:NEW.solde,:NEW.nclient,:NEW.CODEAGENCE);
+      select * into Eag.lag from agences where codeagence=:NEW.codeagence;
+      if (A=0) then
+      insert into agences2 values Eag.lag;end if;
+      select nclient into p from clients2 where nclient=:NEW.nclient;
+    elsif (V='Casablanca' and S<0) then
+      select count(idcompte) into A from comptes1 where comptes1.codeagence=:NEW.codeagence;
+      insert into comptes1 values(:NEW.IDCOMPTE,:NEW.ncompte,:NEW.solde,:NEW.nclient,:NEW.CODEAGENCE);
+    if (A=0)  then select * into Eag.lag from agences where codeagence=:NEW.codeagence;
+      insert into agences1 values Eag.lag;end if;
+      select nclient into p from clients1 where nclient=:NEW.nclient;
+    end if ;
+    COMMIT;
+  
+    exception 
+    when no_data_found then 
+    select * into E.L from clients where nclient=:NEW.nclient;
+    if (V='Rabat' and S>=0) then
+      insert into clients2 values E.L;
+    elsif (V='Casablanca' and S<0) then 
+      insert into clients1 values E.L;
+    END IF;
+    end;
+end;
